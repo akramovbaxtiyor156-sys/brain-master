@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#17152f">
+<title>Brain Master</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;padding:16px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#10152f,#25134a);color:#fff;font-family:Arial,sans-serif}
+.game{width:100%;max-width:430px;padding:24px;background:#1c2141;border:1px solid #494078;border-radius:22px;text-align:center;box-shadow:0 10px 40px #0005}
+h1{margin:5px 0;color:#c5a5ff}.subtitle,.stat small,.footer{color:#aaa8c8}
+.stats{display:flex;gap:9px;margin:22px 0}.stat{flex:1;padding:12px 5px;background:#292e55;border-radius:12px}.stat small{display:block;margin-bottom:7px}.stat strong{font-size:21px}
+.progress{height:9px;overflow:hidden;background:#38385d;border-radius:10px}.bar{height:100%;width:0;background:#b77aff;transition:width .3s}
+.question{margin:20px 0;padding:25px 10px;background:#292e55;border-radius:15px;font-size:32px;font-weight:bold}
+.answers{display:grid;grid-template-columns:1fr 1fr;gap:12px}.answer{padding:18px;border:2px solid #6251a3;border-radius:12px;background:#34345f;color:white;font-size:22px;cursor:pointer}.answer:disabled{opacity:.7;cursor:default}
+.message{min-height:28px;margin:18px 0;font-weight:bold}.main-btn{width:100%;padding:15px;border:0;border-radius:12px;background:linear-gradient(90deg,#8056ed,#bb61e9);color:white;font-size:17px;font-weight:bold;cursor:pointer}
+.hidden{display:none}.footer{margin-top:20px;font-size:12px}
+</style>
+</head>
+<body>
+<main class="game">
+<h1>🧠 Brain Master</h1>
+<p class="subtitle">Aqlingni sinab ko‘r!</p>
+<div class="stats">
+ <div class="stat"><small>🏆 Ball</small><strong id="score">0</strong></div>
+ <div class="stat"><small>❓ Savol</small><strong id="number">0/10</strong></div>
+ <div class="stat"><small>🥇 Rekord</small><strong id="record">0</strong></div>
+</div>
+<div class="progress"><div class="bar" id="bar"></div></div>
+<section id="start">
+ <div class="question">🚀</div><h2>O‘yinga tayyormisan?</h2>
+ <p>10 ta savolga javob ber va rekord o‘rnat!</p>
+ <button class="main-btn" onclick="startGame()">O‘YINNI BOSHLASH</button>
+</section>
+<section id="playing" class="hidden">
+ <div class="question" id="question"></div>
+ <div class="answers" id="answers"></div>
+ <div class="message" id="message" aria-live="polite"></div>
+</section>
+<section id="finish" class="hidden">
+ <div class="question">🏆</div><h2>O‘yin tugadi!</h2>
+ <h3 id="result"></h3><p id="resultText"></p>
+ <button class="main-btn" onclick="startGame()">QAYTA O‘YNASH</button>
+</section>
+<div class="footer">Brain Master © 2026</div>
+</main>
+<script>
+var tg = window.Telegram && window.Telegram.WebApp;
+if (tg) { tg.ready(); tg.expand(); }
+
+var questions = [
+ {q:"5 + 7 = ?",a:["10","12","14","15"],c:"12"},
+ {q:"9 × 3 = ?",a:["18","21","27","30"],c:"27"},
+ {q:"100 - 45 = ?",a:["45","55","65","50"],c:"55"},
+ {q:"2, 4, 6, 8, ?",a:["9","10","11","12"],c:"10"},
+ {q:"8 × 8 = ?",a:["56","64","72","68"],c:"64"},
+ {q:"15 + 25 = ?",a:["35","40","45","50"],c:"40"},
+ {q:"1, 3, 5, 7, ?",a:["8","9","10","11"],c:"9"},
+ {q:"81 ÷ 9 = ?",a:["7","8","9","10"],c:"9"},
+ {q:"50 - 18 = ?",a:["28","32","35","38"],c:"32"},
+ {q:"12 × 2 = ?",a:["22","24","26","28"],c:"24"}
+];
+var index=0,score=0,record=Number(localStorage.getItem("brainRecord")||0),locked=false;
+document.getElementById("record").innerText=record;
+
+function startGame(){
+ index=0;score=0;locked=false;
+ document.getElementById("score").innerText="0";
+ document.getElementById("number").innerText="0/10";
+ document.getElementById("start").classList.add("hidden");
+ document.getElementById("finish").classList.add("hidden");
+ document.getElementById("playing").classList.remove("hidden");
+ showQuestion();
+}
+function showQuestion(){
+ locked=false;
+ var q=questions[index];
+ document.getElementById("question").innerText=q.q;
+ document.getElementById("number").innerText=(index+1)+"/10";
+ document.getElementById("bar").style.width=(index*10)+"%";
+ document.getElementById("message").innerText="";
+ var html="";
+ for(var i=0;i<q.a.length;i++){
+  html+='<button class="answer" onclick="checkAnswer(this)">'+q.a[i]+'</button>';
+ }
+ document.getElementById("answers").innerHTML=html;
+}
+function checkAnswer(button){
+ if(locked)return;
+ locked=true;
+ var correct=questions[index].c;
+ var buttons=document.querySelectorAll(".answer");
+ if(button.innerText===correct){
+  score+=10;
+  document.getElementById("message").innerText="✅ To‘g‘ri! +10 ball";
+ }else{
+  document.getElementById("message").innerText="❌ Noto‘g‘ri! Javob: "+correct;
+ }
+ document.getElementById("score").innerText=score;
+ for(var i=0;i<buttons.length;i++)buttons[i].disabled=true;
+ index++;
+ window.setTimeout(function(){
+  if(index<questions.length)showQuestion();
+  else finishGame();
+ },900);
+}
+function finishGame(){
+ document.getElementById("playing").classList.add("hidden");
+ document.getElementById("finish").classList.remove("hidden");
+ document.getElementById("bar").style.width="100%";
+ document.getElementById("number").innerText="10/10";
+ if(score>record){
+  record=score;
+  localStorage.setItem("brainRecord",String(record));
+  document.getElementById("record").innerText=record;
+  document.getElementById("resultText").innerText="🎉 Yangi rekord!";
+ }else{
+  document.getElementById("resultText").innerText="Yana urinib ko‘r!";
+ }
+ document.getElementById("result").innerText="Natijang: "+score+" / 100";
+}
+</script>
+</body>
+</html>
